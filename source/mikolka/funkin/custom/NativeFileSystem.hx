@@ -17,11 +17,18 @@ import sys.FileSystem as FileSystem;
 	**Works only on paths relative to game's root dorectory*
 
 	Basically NativeFileSystem, but we can emulate it on OpenFL.
-	It can either 
+	It can either
 **/
 class NativeFileSystem
 {
 	public static var openFlAssets:Array<String> = null;
+
+	private static function _getAssetsList():Array<String>
+	{
+		if (openFlAssets == null)
+			openFlAssets = Assets.list();
+		return openFlAssets;
+	}
 
 	public static function getContent(path:String):Null<String>
 	{
@@ -29,7 +36,12 @@ class NativeFileSystem
 		#if OPENFL_LOOKUP
 		if (!isModded)
 		{
-			var openfl_content = (openFlAssets.contains(path)) ? Assets.getText(path) : null;
+			var openfl_content:Null<String> = null;
+			try
+			{
+				openfl_content = Assets.getText(path);
+			}
+			catch (e:Dynamic) {}
 			if (openfl_content != null)
 				return openfl_content;
 		}
@@ -55,10 +67,17 @@ class NativeFileSystem
 		var isModded = path.startsWith("mods");
 
 		#if OPENFL_LOOKUP
-		if (#if NATIVE_LOOKUP !isModded && #end openFlAssets.contains(path))
+		if (#if NATIVE_LOOKUP !isModded #else true #end)
 		{
-			var result = OpenFlAssets.getBitmapData(path);
-			return result;
+			// OpenFlAssets.getBitmapData сам ищет в библиотеках Lime.
+			var result:Null<BitmapData> = null;
+			try
+			{
+				result = OpenFlAssets.getBitmapData(path);
+			}
+			catch (e:Dynamic) {}
+			if (result != null)
+				return result;
 		}
 		#end
 
@@ -85,16 +104,19 @@ class NativeFileSystem
 		#if OPENFL_LOOKUP
 		if (!isModded)
 		{
-			if (openFlAssets.contains(path))
+			var result:Null<Sound> = null;
+			try
 			{
-				var result = OpenFlAssets.getSound(path);
-				#if nativesys_profile
-				var timeEnd = Sys.cpuTime() - timeStart;
-				if (timeEnd > 1.2)
-					trace('Getting native ${path} took: $timeEnd');
-				#end
-				return result;
+				result = OpenFlAssets.getSound(path);
 			}
+			catch (e:Dynamic) {}
+			#if nativesys_profile
+			var timeEnd = Sys.cpuTime() - timeStart;
+			if (timeEnd > 1.2)
+				trace('Getting native ${path} took: $timeEnd');
+			#end
+			if (result != null)
+				return result;
 		}
 		#end
 
@@ -124,20 +146,28 @@ class NativeFileSystem
 	}
 
 	// Check if the file exists
-	public static function exists(path:String)
+	public static function exists(path:String):Bool
 	{
 		var isModded = path.startsWith("mods");
 
 		#if OPENFL_LOOKUP
 		if (!isModded)
 		{
-			var isFile = openFlAssets.contains(path);
-			if (!isFile)
+			var isFile = false;
+			try
 			{
-				var isDir = openFlAssets.filter(folder -> folder.startsWith(path)).length > 0;
-				return isDir;
+				isFile = OpenFlAssets.exists(path);
 			}
-			return isFile;
+			catch (e:Dynamic) {}
+			if (isFile)
+				return true;
+
+			// Fallback на список (с lazy-init)
+			var list = _getAssetsList();
+			if (list.contains(path))
+				return true;
+			var isDir = list.filter(folder -> folder.startsWith(path)).length > 0;
+			return isDir;
 		}
 		#end
 
@@ -168,7 +198,8 @@ class NativeFileSystem
 			var dirs:Array<String> = [];
 			if (!directory.endsWith("/"))
 				directory += '/';
-			for (dir in openFlAssets.filter(folder -> folder.startsWith(directory)))
+			var list = _getAssetsList();
+			for (dir in list.filter(folder -> folder.startsWith(directory)))
 			{
 				@:privateAccess
 				for (library in lime.utils.Assets.libraries.keys())
@@ -211,7 +242,7 @@ class NativeFileSystem
 
 	/**
 	 * Checks if the given path is a valid directory.
-	 * @param directory A path **relative** to the working directory 
+	 * @param directory A path **relative** to the working directory
 	 * @return Bool Is it a valid directory
 	 */
 	//
@@ -226,7 +257,8 @@ class NativeFileSystem
 		#if OPENFL_LOOKUP
 		if (!result && !isModded)
 		{
-			result = openFlAssets.filter(folder -> folder.startsWith(directory) && folder != directory).length > 0;
+			var list = _getAssetsList();
+			result = list.filter(folder -> folder.startsWith(directory) && folder != directory).length > 0;
 		}
 		#end
 
