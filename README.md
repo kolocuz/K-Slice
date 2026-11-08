@@ -22,6 +22,8 @@ Welcome to **K-Slice** (a fork from H-Slice+JS and D-Slice), a Friday Night Funk
 
 This engine is still H-Slice+JS Engine but builds upon features from JS Engine and may include new features in the future.
 
+I use an AI assistant for coding. But I check everything myself!
+
 <details>
   <summary><h2>Original P-Slice Description</h2></summary>
 <!-- Thanks soushimiya for this README template! -->
