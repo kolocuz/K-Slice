@@ -147,12 +147,12 @@ class InitState extends MusicBeatState
 		if (ClientPrefs.data.checkForUpdates)
 		{
 			trace('checking for update');
-			var http = new haxe.Http("https://raw.githubusercontent.com/HRK-EXEX/H-Slice/master/gitVersion.txt");
+			var http = new haxe.Http("https://raw.githubusercontent.com/kolocuz/K-Slice/refs/heads/master/gitVersion.txt");
 
 			http.onData = data ->
 			{
 				updateVersion = data.split('\n')[0].trim();
-				var curVersion:String = MainMenuState.hrkVersion.trim();
+				var curVersion:String = MainMenuState.kSliceVersion.trim();
 
 				trace('version online: $updateVersion, your version: $curVersion');
 
