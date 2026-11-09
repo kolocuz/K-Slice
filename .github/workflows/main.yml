@@ -101,7 +101,9 @@ jobs:
 
   Android:
     needs: CacheMobile
-    if: contains(inputs.platforms, 'android')
+    # Run even if the macOS cache job was cancelled (e.g. no runner capacity).
+    # The build restores the existing .haxelib cache itself and fails loudly on a miss.
+    if: ${{ !cancelled() && contains(inputs.platforms, 'android') }}
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
@@ -119,7 +121,8 @@ jobs:
 
   iOS:
     needs: CacheMobile
-    if: contains(inputs.platforms, 'ios')
+    # Same as Android: don't skip the build just because the cache job failed.
+    if: ${{ !cancelled() && contains(inputs.platforms, 'ios') }}
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
@@ -138,7 +141,16 @@ jobs:
   Release:
     name: Publish Release
     needs: [Windows, Linux, Android, iOS]
-    if: ${{ inputs.publish && !cancelled() && !failure() }}
+    # Publish only when every requested platform actually built. A skipped
+    # platform job (e.g. dependency cancelled) no longer produces a partial release.
+    if: >-
+      ${{
+        inputs.publish && !cancelled() && !failure() &&
+        (needs.Windows.result == 'success' || !contains(inputs.platforms, 'win')) &&
+        (needs.Linux.result == 'success' || !contains(inputs.platforms, 'linux')) &&
+        (needs.Android.result == 'success' || !contains(inputs.platforms, 'android')) &&
+        (needs.iOS.result == 'success' || !contains(inputs.platforms, 'ios'))
+      }}
     runs-on: ubuntu-24.04
     steps:
       - name: Download artifacts
