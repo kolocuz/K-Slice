@@ -31,7 +31,7 @@ on:
       draft:
         description: 'Release as draft'
         type: boolean
-        default: true
+        default: false
       prerelease:
         description: 'Release as prerelease'
         type: boolean
@@ -43,6 +43,12 @@ on:
 
 permissions:
   contents: write
+
+# One build/release per version at a time, so two runs can't race and create
+# duplicate draft releases for the same tag.
+concurrency:
+  group: release-${{ inputs.version }}
+  cancel-in-progress: false
 
 jobs:
   CacheDesktop:

@@ -13,6 +13,12 @@ on:
       artifactName:
         required: true
         type: string
+      # Optional: upload raw build output instead of the packaged dist/* files.
+      # Kept for compatibility with older callers (e.g. main-dev.yml).
+      artifactPath:
+        required: false
+        type: string
+        default: ''
       exportPath:
         required: true
         type: string
@@ -154,7 +160,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.artifactName }}
-          path: dist/*
+          path: ${{ inputs.artifactPath || 'dist/*' }}
           if-no-files-found: error
           retention-days: ${{ inputs.retentionDays }}
 
