@@ -62,7 +62,7 @@ jobs:
     uses: ./.github/workflows/dependencies.yml
     with:
       os: ubuntu-latest
-      CACHE_NAME: K-Slice2.mobile-cache
+      CACHE_NAME: K-Slice2.mobile-cache-linux
       setupScript: sh ./setup/mobile.sh
 
   Windows:
@@ -112,8 +112,8 @@ jobs:
       buildArgs: android
       exportPath: android
       artifactName: K-Slice_${{ inputs.version }}_android_${{ inputs.type }}
-      cachePath: K-Slice2.build-android
-      cacheLibrariesPath: K-Slice2.mobile-cache
+      cachePath: K-Slice2.build-android-linux
+      cacheLibrariesPath: K-Slice2.mobile-cache-linux
       buildMode: ${{ inputs.mode }}
       buildType: ${{ inputs.type }}
       basegame: ${{ inputs.basegame }}
