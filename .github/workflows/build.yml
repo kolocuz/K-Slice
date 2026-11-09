@@ -109,36 +109,45 @@ jobs:
 
       - name: Make IPA
         if: inputs.name == 'iOS'
+        shell: bash
         run: |
           cd export/release/ios/build/Release-iphoneos
           mkdir -p Payload
           mv *.app Payload
           zip -r ${{ env.PROJECT_NAME }}.ipa Payload
 
-      - name: Package artifact
+      - name: Package artifact (Windows)
+        if: inputs.exportPath == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path export/release/windows/bin/* -DestinationPath "dist/${{ inputs.artifactName }}.zip" -Force
+          Get-ChildItem dist
+
+      - name: Package artifact (Linux)
+        if: inputs.exportPath == 'linux'
         shell: bash
         run: |
           mkdir -p dist
-          case "${{ inputs.exportPath }}" in
-            windows)
-              cd export/release/windows/bin
-              zip -r "$GITHUB_WORKSPACE/dist/${{ inputs.artifactName }}.zip" .
-              ;;
-            linux)
-              tar -C export/release/linux/bin -czf "dist/${{ inputs.artifactName }}.tar.gz" .
-              ;;
-            android)
-              apk_path="$(find export/release/android/bin -type f -name '*.apk' | head -n 1)"
-              test -n "$apk_path"
-              cp "$apk_path" "dist/${{ inputs.artifactName }}.apk"
-              ;;
-            ios)
-              cp export/release/ios/build/Release-iphoneos/${{ env.PROJECT_NAME }}.ipa "dist/${{ inputs.artifactName }}.ipa"
-              ;;
-            *)
-              echo "Unknown exportPath: ${{ inputs.exportPath }}"; exit 1
-              ;;
-          esac
+          tar -C export/release/linux/bin -czf "dist/${{ inputs.artifactName }}.tar.gz" .
+          ls -la dist/
+
+      - name: Package artifact (Android)
+        if: inputs.exportPath == 'android'
+        shell: bash
+        run: |
+          mkdir -p dist
+          apk_path="$(find export/release/android/bin -type f -name '*.apk' | head -n 1)"
+          test -n "$apk_path"
+          cp "$apk_path" "dist/${{ inputs.artifactName }}.apk"
+          ls -la dist/
+
+      - name: Package artifact (iOS)
+        if: inputs.exportPath == 'ios'
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp export/release/ios/build/Release-iphoneos/${{ env.PROJECT_NAME }}.ipa "dist/${{ inputs.artifactName }}.ipa"
           ls -la dist/
 
       - name: Upload Artifact
