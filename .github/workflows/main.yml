@@ -61,7 +61,7 @@ jobs:
   CacheMobile:
     uses: ./.github/workflows/dependencies.yml
     with:
-      os: macos-latest
+      os: ubuntu-latest
       CACHE_NAME: K-Slice2.mobile-cache
       setupScript: sh ./setup/mobile.sh
 
@@ -101,14 +101,14 @@ jobs:
 
   Android:
     needs: CacheMobile
-    # Run even if the macOS cache job was cancelled (e.g. no runner capacity).
-    # The build restores the existing .haxelib cache itself and fails loudly on a miss.
+    # Run even if the cache job was cancelled; the build restores the existing
+    # .haxelib cache itself and fails loudly on a cache miss.
     if: ${{ !cancelled() && contains(inputs.platforms, 'android') }}
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
       name: Android
-      os: macos-15
+      os: ubuntu-22.04
       buildArgs: android
       exportPath: android
       artifactName: K-Slice_${{ inputs.version }}_android_${{ inputs.type }}

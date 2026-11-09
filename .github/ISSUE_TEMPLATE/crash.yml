@@ -43,9 +43,7 @@ body:
       options:
         - "Windows"
         - "Linux"
-        - "Mac"
         - "Android"
-        - "iOS"
     validations:
       required: true
 
