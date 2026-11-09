@@ -1,4 +1,4 @@
-name: Build the game
+name: Build the game + relase
 
 on:
   workflow_dispatch:
