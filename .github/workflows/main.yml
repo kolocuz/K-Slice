@@ -18,7 +18,7 @@ on:
         options: [release, debug, profile]
         default: release
       platforms:
-        description: 'Platforms (comma: win,linux,android,ios)'
+        description: 'Platforms (comma: win,linux,android)'
         default: 'win,linux,android'
       basegame:
         description: 'Include base game assets'
@@ -119,28 +119,9 @@ jobs:
       basegame: ${{ inputs.basegame }}
       retentionDays: ${{ fromJSON(inputs.retention) }}
 
-  iOS:
-    needs: CacheMobile
-    # Same as Android: don't skip the build just because the cache job failed.
-    if: ${{ !cancelled() && contains(inputs.platforms, 'ios') }}
-    uses: ./.github/workflows/build.yml
-    secrets: inherit
-    with:
-      name: iOS
-      os: macos-15
-      buildArgs: ios -nosign
-      exportPath: ios
-      artifactName: K-Slice_${{ inputs.version }}_ios_${{ inputs.type }}
-      cachePath: K-Slice2.build-ios
-      cacheLibrariesPath: K-Slice2.mobile-cache
-      buildMode: ${{ inputs.mode }}
-      buildType: ${{ inputs.type }}
-      basegame: ${{ inputs.basegame }}
-      retentionDays: ${{ fromJSON(inputs.retention) }}
-
   Release:
     name: Publish Release
-    needs: [Windows, Linux, Android, iOS]
+    needs: [Windows, Linux, Android]
     # Publish only when every requested platform actually built. A skipped
     # platform job (e.g. dependency cancelled) no longer produces a partial release.
     if: >-
@@ -148,8 +129,7 @@ jobs:
         inputs.publish && !cancelled() && !failure() &&
         (needs.Windows.result == 'success' || !contains(inputs.platforms, 'win')) &&
         (needs.Linux.result == 'success' || !contains(inputs.platforms, 'linux')) &&
-        (needs.Android.result == 'success' || !contains(inputs.platforms, 'android')) &&
-        (needs.iOS.result == 'success' || !contains(inputs.platforms, 'ios'))
+        (needs.Android.result == 'success' || !contains(inputs.platforms, 'android'))
       }}
     runs-on: ubuntu-24.04
     steps:
@@ -175,14 +155,13 @@ jobs:
             release-assets/**/*.zip
             release-assets/**/*.tar.gz
             release-assets/**/*.apk
-            release-assets/**/*.ipa
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   Summary:
     name: Build Summary
-    needs: [Windows, Linux, Android, iOS, Release]
+    needs: [Windows, Linux, Android, Release]
     if: always()
     runs-on: ubuntu-24.04
     steps:
@@ -195,7 +174,6 @@ jobs:
           echo "| Windows | ${{ needs.Windows.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Linux | ${{ needs.Linux.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Android | ${{ needs.Android.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| iOS | ${{ needs.iOS.result }} |" >> $GITHUB_STEP_SUMMARY
           if [[ "${{ inputs.publish }}" == "true" ]]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "✅ Release: [v${{ inputs.version }}](https://github.com/${{ github.repository }}/releases/tag/v${{ inputs.version }})" >> $GITHUB_STEP_SUMMARY

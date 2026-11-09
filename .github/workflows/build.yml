@@ -47,7 +47,6 @@ on:
 
 env:
   HAXE_VERSION: 4.3.6
-  PROJECT_NAME: K-Slice
 
 jobs:
   build:
@@ -113,15 +112,6 @@ jobs:
           echo "Compiling: haxelib run lime build $FLAGS"
           haxelib run lime build $FLAGS
 
-      - name: Make IPA
-        if: inputs.name == 'iOS'
-        shell: bash
-        run: |
-          cd export/release/ios/build/Release-iphoneos
-          mkdir -p Payload
-          mv *.app Payload
-          zip -r ${{ env.PROJECT_NAME }}.ipa Payload
-
       - name: Package artifact (Windows)
         if: inputs.exportPath == 'windows'
         shell: pwsh
@@ -146,14 +136,6 @@ jobs:
           apk_path="$(find export/release/android/bin -type f -name '*.apk' | head -n 1)"
           test -n "$apk_path"
           cp "$apk_path" "dist/${{ inputs.artifactName }}.apk"
-          ls -la dist/
-
-      - name: Package artifact (iOS)
-        if: inputs.exportPath == 'ios'
-        shell: bash
-        run: |
-          mkdir -p dist
-          cp export/release/ios/build/Release-iphoneos/${{ env.PROJECT_NAME }}.ipa "dist/${{ inputs.artifactName }}.ipa"
           ls -la dist/
 
       - name: Upload Artifact
