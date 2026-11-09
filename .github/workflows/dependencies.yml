@@ -10,7 +10,7 @@ on:
       setupScript:
         required: true
         type: string
-# PE10-Desktop_Cache
+
 env:
   HAXE_VERSION: 4.3.6
   PROJECT_NAME: K-Slice
@@ -24,18 +24,18 @@ jobs:
     steps:
       - name: Restore Libraries for compilation
         id: load-lib-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
-          key:  ${{ inputs.CACHE_NAME }}
+          key: ${{ inputs.CACHE_NAME }}
           enableCrossOsArchive: true
           path: |
             .haxelib/
           restore-keys: |
-             ${{ inputs.CACHE_NAME }}
+            ${{ inputs.CACHE_NAME }}
 
       - name: Checkout
         if: steps.load-lib-cache.outputs.cache-hit != 'true'
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
 
       - name: Setup Haxe
         if: steps.load-lib-cache.outputs.cache-hit != 'true'
@@ -45,7 +45,7 @@ jobs:
 
       - name: Setup haxelib
         if: steps.load-lib-cache.outputs.cache-hit != 'true'
-        run: haxelib newrepo    
+        run: haxelib newrepo
 
       - name: Install Libraries
         if: steps.load-lib-cache.outputs.cache-hit != 'true'
@@ -61,7 +61,7 @@ jobs:
 
       - name: Uploading new cache
         if: steps.load-lib-cache.outputs.cache-hit != 'true'
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: ${{ inputs.CACHE_NAME }}
           enableCrossOsArchive: true
