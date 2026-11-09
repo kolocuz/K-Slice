@@ -1,4 +1,4 @@
-name: Build the game + release
+name: Full Build the game
 
 on:
   workflow_dispatch:
@@ -98,25 +98,3 @@ jobs:
       artifactPath: ${{ matrix.artifactPath }}
       cachePath: ${{ matrix.cachePath }}
       cacheLibrariesPath: ${{ matrix.cacheLibrariesPath }}
-
-  Release:
-    name: Create Release
-    needs: [BuildDesktop, BuildMobile]
-    runs-on: ubuntu-latest
-    permissions: write-all
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ inputs.version }}
-          name: K-Slice v${{ inputs.version }}
-          body: |
-            K-Slice v${{ inputs.version }}
-          draft: false
-          prerelease: false
-          files: |
-            artifacts/**/*
