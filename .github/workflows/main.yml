@@ -1,109 +1,184 @@
 name: Build the game
 
 on:
-  pull_request:
-    branches: [master]
-  push:
-    branches: [developmentalist]
   workflow_dispatch:
-jobs:
-  BuildCaches:
-    name: ${{ matrix.name }}
-    permissions: write-all
-    strategy:
-      matrix:
-        include:
-          - name: Desktop
-            os: ubuntu-latest
-            setupScript: sh ./setup/unix.sh
-            CACHE_NAME: H-Slice+JS.desktop-cache
+    inputs:
+      version:
+        description: 'Version'
+        required: true
+        default: '0.0.1'
+      mode:
+        description: 'Build mode'
+        type: choice
+        options: [fast, full]
+        default: fast
+      type:
+        description: 'Build type'
+        type: choice
+        options: [release, debug, profile]
+        default: release
+      platforms:
+        description: 'Platforms (comma: win,linux,android,ios)'
+        default: 'win,linux,android'
+      basegame:
+        description: 'Include base game assets'
+        type: boolean
+        default: true
+      publish:
+        description: 'Publish GitHub Release (else artifacts only)'
+        type: boolean
+        default: false
+      draft:
+        description: 'Release as draft'
+        type: boolean
+        default: true
+      prerelease:
+        description: 'Release as prerelease'
+        type: boolean
+        default: false
+      retention:
+        description: 'Artifact retention days'
+        type: number
+        default: 7
 
-          - name: Mobile
-            os: macos-latest
-            setupScript: sh ./setup/mobile.sh
-            CACHE_NAME: H-Slice+JS.mobile-cache
+permissions:
+  contents: write
+
+jobs:
+  CacheDesktop:
     uses: ./.github/workflows/dependencies.yml
     with:
-      os: ${{ matrix.os }}
-      CACHE_NAME: ${{ matrix.CACHE_NAME }}
-      setupScript: ${{ matrix.setupScript }}
-  BuildMacos:
-    name: macos
-    needs: BuildCaches
-    permissions: write-all
-    uses: ./.github/workflows/mac-universal.yml
-    with:
-      exportPath: macos
-      artifactName: H-Slice+JS_0.2.4_macos
-      artifactPath: export/release/macos/bin/*
-      cachePath: H-Slice+JS.build-macos
-      cacheLibrariesPath: H-Slice+JS.mobile-cache
-  BuildDesktop:
-    name: ${{ matrix.name }}
-    needs: BuildCaches
-    permissions: write-all
-    strategy:
-      matrix:
-        include:
-          - name: Windows
-            os: windows-2022
-            buildArgs: windows
-            exportPath: windows
-            artifactName: H-Slice+JS_0.2.4_windows
-            artifactPath: export\release\windows\bin\*
-            cachePath: H-Slice+JS.build-windows
-            cacheLibrariesPath: H-Slice+JS.desktop-cache
-          - name: Linux
-            os: ubuntu-22.04
-            buildArgs: linux
-            exportPath: linux
-            artifactName: H-Slice+JS_0.2.4_linux
-            artifactPath: export/release/linux/bin/*
-            cachePath: H-Slice+JS.build-linux
-            cacheLibrariesPath: H-Slice+JS.desktop-cache
+      os: ubuntu-latest
+      CACHE_NAME: K-Slice2.desktop-cache
+      setupScript: sh ./setup/unix.sh
 
+  CacheMobile:
+    uses: ./.github/workflows/dependencies.yml
+    with:
+      os: macos-latest
+      CACHE_NAME: K-Slice2.mobile-cache
+      setupScript: sh ./setup/mobile.sh
+
+  Windows:
+    needs: CacheDesktop
+    if: contains(inputs.platforms, 'win')
     uses: ./.github/workflows/build.yml
     with:
-      name: ${{ matrix.name }}
-      os: ${{ matrix.os }}
-      buildArgs: ${{ matrix.buildArgs }}
-      exportPath: ${{ matrix.exportPath }}
-      artifactName: ${{ matrix.artifactName }}
-      artifactPath: ${{ matrix.artifactPath }}
-      cachePath: ${{matrix.cachePath}}
-      cacheLibrariesPath: ${{ matrix.cacheLibrariesPath }}
+      name: Windows
+      os: windows-2022
+      buildArgs: windows
+      exportPath: windows
+      artifactName: K-Slice_${{ inputs.version }}_windows_${{ inputs.type }}
+      cachePath: K-Slice2.build-windows
+      cacheLibrariesPath: K-Slice2.desktop-cache
+      buildMode: ${{ inputs.mode }}
+      buildType: ${{ inputs.type }}
+      basegame: ${{ inputs.basegame }}
+      retentionDays: ${{ fromJSON(inputs.retention) }}
 
-  BuildMobile:
-    permissions: write-all
-    needs: BuildCaches
-    name: ${{ matrix.name }}
-    strategy:
-      matrix:
-        include:
-          - name: Android
-            os: macos-15
-            buildArgs: "android"
-            exportPath: android
-            artifactName: H-Slice+JS_0.2.4_android
-            artifactPath: "export/release/android/bin/app/build/outputs/apk/release/*.apk"
-            cachePath: H-Slice+JS.build-android
-            cacheLibrariesPath: H-Slice+JS.mobile-cache
-          - name: iOS
-            os: macos-15
-            buildArgs: "ios -nosign"
-            exportPath: ios
-            artifactName: H-Slice+JS_0.2.4_ios
-            artifactPath: "export/release/ios/build/Release-iphoneos/*.ipa"
-            cachePath: H-Slice+JS.build-ios
-            cacheLibrariesPath: H-Slice+JS.mobile-cache
+  Linux:
+    needs: CacheDesktop
+    if: contains(inputs.platforms, 'linux')
+    uses: ./.github/workflows/build.yml
+    with:
+      name: Linux
+      os: ubuntu-22.04
+      buildArgs: linux
+      exportPath: linux
+      artifactName: K-Slice_${{ inputs.version }}_linux_${{ inputs.type }}
+      cachePath: K-Slice2.build-linux
+      cacheLibrariesPath: K-Slice2.desktop-cache
+      buildMode: ${{ inputs.mode }}
+      buildType: ${{ inputs.type }}
+      basegame: ${{ inputs.basegame }}
+      retentionDays: ${{ fromJSON(inputs.retention) }}
+
+  Android:
+    needs: CacheMobile
+    if: contains(inputs.platforms, 'android')
     uses: ./.github/workflows/build.yml
     secrets: inherit
     with:
-      name: ${{ matrix.name }}
-      os: ${{ matrix.os }}
-      buildArgs: ${{ matrix.buildArgs }}
-      exportPath: ${{ matrix.exportPath }}
-      artifactName: ${{ matrix.artifactName }}
-      artifactPath: ${{ matrix.artifactPath }}
-      cachePath: ${{matrix.cachePath}}
-      cacheLibrariesPath: ${{ matrix.cacheLibrariesPath }}
+      name: Android
+      os: macos-15
+      buildArgs: android
+      exportPath: android
+      artifactName: K-Slice_${{ inputs.version }}_android_${{ inputs.type }}
+      cachePath: K-Slice2.build-android
+      cacheLibrariesPath: K-Slice2.mobile-cache
+      buildMode: ${{ inputs.mode }}
+      buildType: ${{ inputs.type }}
+      basegame: ${{ inputs.basegame }}
+      retentionDays: ${{ fromJSON(inputs.retention) }}
+
+  iOS:
+    needs: CacheMobile
+    if: contains(inputs.platforms, 'ios')
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      name: iOS
+      os: macos-15
+      buildArgs: ios -nosign
+      exportPath: ios
+      artifactName: K-Slice_${{ inputs.version }}_ios_${{ inputs.type }}
+      cachePath: K-Slice2.build-ios
+      cacheLibrariesPath: K-Slice2.mobile-cache
+      buildMode: ${{ inputs.mode }}
+      buildType: ${{ inputs.type }}
+      basegame: ${{ inputs.basegame }}
+      retentionDays: ${{ fromJSON(inputs.retention) }}
+
+  Release:
+    name: Publish Release
+    needs: [Windows, Linux, Android, iOS]
+    if: ${{ inputs.publish && !cancelled() && !failure() }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: List assets
+        run: find release-assets -type f -printf '%p (%s bytes)\n'
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: K-Slice v${{ inputs.version }}
+          draft: ${{ inputs.draft }}
+          prerelease: ${{ inputs.prerelease }}
+          body: |
+            ## K-Slice v${{ inputs.version }}
+            Build: `${{ inputs.mode }}` / `${{ inputs.type }}`
+          files: |
+            release-assets/**/*.zip
+            release-assets/**/*.tar.gz
+            release-assets/**/*.apk
+            release-assets/**/*.ipa
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  Summary:
+    name: Build Summary
+    needs: [Windows, Linux, Android, iOS, Release]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## 🚀 K-Slice Build" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows | ${{ needs.Windows.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux | ${{ needs.Linux.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Android | ${{ needs.Android.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| iOS | ${{ needs.iOS.result }} |" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ inputs.publish }}" == "true" ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Release: [v${{ inputs.version }}](https://github.com/${{ github.repository }}/releases/tag/v${{ inputs.version }})" >> $GITHUB_STEP_SUMMARY
+          fi
